@@ -1,6 +1,7 @@
 package tempilecore
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -69,9 +70,9 @@ func parseRawAstToCustomAst(rawAST *html.Node) []Node {
 					nodes = append(nodes, forNode)
 				}
 			case "import":
-				importNode := parseImportNode(c)
+				importNode, err := parseImportNode(c)
 
-				if importNode != nil {
+				if err == nil {
 					nodes = append(nodes, importNode)
 				}
 			case "slot":
@@ -223,17 +224,22 @@ func parseForNode(node *html.Node) *ForNode {
 	return nil
 }
 
-func parseImportNode(node *html.Node) *ImportNode {
+func parseImportNode(node *html.Node) (*ImportNode, error) {
+	ctxId, err := generateId()
+	if err != nil {
+		return nil, err
+	}
 	path := searchAttr(node.Attr, "path")
 
 	if path != "" {
 		return &ImportNode{
+			CtxId:  ctxId,
 			Path:   path,
 			Childs: parseRawAstToCustomAst(node),
-		}
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("path is empty")
 }
 
 func parseSlotNode(node *html.Node) *SlotNode {

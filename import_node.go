@@ -1,6 +1,7 @@
 package tempilecore
 
 type ImportNode struct {
+	CtxId  string
 	Path   string
 	Childs []Node
 }
