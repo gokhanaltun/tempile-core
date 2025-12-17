@@ -30,10 +30,15 @@ func Parse(src string) (*Root, error) {
 		rootNode.AppendChild(n)
 	}
 
-	return &Root{Childs: parseRawAstToCustomAst(rootNode)}, nil
+	childs, err := parseRawAstToCustomAst(rootNode)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Root{Childs: childs}, nil
 }
 
-func parseRawAstToCustomAst(rawAST *html.Node) []Node {
+func parseRawAstToCustomAst(rawAST *html.Node) ([]Node, error) {
 	var nodes []Node
 
 	for c := rawAST.FirstChild; c != nil; c = c.NextSibling {
@@ -53,44 +58,59 @@ func parseRawAstToCustomAst(rawAST *html.Node) []Node {
 
 			switch tag {
 			case "if":
-				ifNode := parseIfNode(c)
-				if ifNode != nil {
-					nodes = append(nodes, ifNode)
+				ifNode, err := parseIfNode(c)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, ifNode)
 			case "elseif":
-				elseIfNode := parseElseIfNode(c)
-				if elseIfNode != nil {
-					nodes = append(nodes, elseIfNode)
+				elseIfNode, err := parseElseIfNode(c)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, elseIfNode)
 			case "else":
-				nodes = append(nodes, parseElseNode(c))
-			case "for":
-				forNode := parseForNode(c)
-				if forNode != nil {
-					nodes = append(nodes, forNode)
+				childs, err := parseElseNode(c)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, childs)
+			case "for":
+				forNode, err := parseForNode(c)
+				if err != nil {
+					return nil, err
+				}
+				nodes = append(nodes, forNode)
 			case "import":
 				importNode, err := parseImportNode(c)
 
-				if err == nil {
-					nodes = append(nodes, importNode)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, importNode)
+
 			case "slot":
-				slotNode := parseSlotNode(c)
-				if slotNode != nil {
-					nodes = append(nodes, slotNode)
+				slotNode, err := parseSlotNode(c)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, slotNode)
 			case "content":
-				contentNode := parseContentNode(c)
-				if contentNode != nil {
-					nodes = append(nodes, contentNode)
+				contentNode, err := parseContentNode(c)
+				if err != nil {
+					return nil, err
 				}
+				nodes = append(nodes, contentNode)
 			default:
-				nodes = append(nodes, parseElementNode(c))
+				childs, err := parseElementNode(c)
+				if err != nil {
+					return nil, err
+				}
+				nodes = append(nodes, childs)
 			}
 		}
 	}
-	return nodes
+	return nodes, nil
 }
 
 func parseCommentNode(node *html.Node) *CommentNode {
@@ -139,14 +159,14 @@ func parseTextNode(node *html.Node) []Node {
 	return nodes
 }
 
-func parseElementNode(node *html.Node) Node {
+func parseElementNode(node *html.Node) (Node, error) {
 	tempileType := searchAttr(node.Attr, "type")
 	tag := ""
 	var attrs []*Attribute
 
 	switch tempileType {
 	case "doctype":
-		return &DocumentTypeNode{Data: "<!DOCTYPE html>"}
+		return &DocumentTypeNode{Data: "<!DOCTYPE html>"}, nil
 	case "html":
 		tag = "html"
 		attrs = deleteFromAttrs(node.Attr, "type")
@@ -161,18 +181,27 @@ func parseElementNode(node *html.Node) Node {
 		attrs = parseAttrs(node.Attr)
 	}
 
+	childs, err := parseRawAstToCustomAst(node)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ElementNode{
 		Tag:    tag,
 		Attrs:  attrs,
-		Childs: parseRawAstToCustomAst(node),
-	}
+		Childs: childs,
+	}, nil
 }
 
-func parseIfNode(node *html.Node) *IfNode {
+func parseIfNode(node *html.Node) (*IfNode, error) {
 	conds := parseAttrs(node.Attr)
 
 	if len(conds) > 0 {
-		childs := parseRawAstToCustomAst(node)
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
+
 		ifNode := &IfNode{
 			Conds: conds,
 		}
@@ -189,39 +218,53 @@ func parseIfNode(node *html.Node) *IfNode {
 				ifNode.Then = append(ifNode.Then, c)
 			}
 		}
-		return ifNode
+		return ifNode, nil
 	}
-	return nil
+	return nil, errors.New("conds is empty")
 }
 
-func parseElseIfNode(node *html.Node) *ElseIfNode {
+func parseElseIfNode(node *html.Node) (*ElseIfNode, error) {
 	conds := parseAttrs(node.Attr)
 
 	if len(conds) > 0 {
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
 		return &ElseIfNode{
 			Conds:  conds,
-			Childs: parseRawAstToCustomAst(node),
-		}
+			Childs: childs,
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("conds is empty")
 }
 
-func parseElseNode(node *html.Node) *ElseNode {
-	return &ElseNode{Childs: parseRawAstToCustomAst(node)}
+func parseElseNode(node *html.Node) (*ElseNode, error) {
+	childs, err := parseRawAstToCustomAst(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ElseNode{Childs: childs}, nil
 }
 
-func parseForNode(node *html.Node) *ForNode {
+func parseForNode(node *html.Node) (*ForNode, error) {
 	loops := parseAttrs(node.Attr)
 
 	if len(loops) > 0 {
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
+
 		return &ForNode{
 			Loops:  loops,
-			Childs: parseRawAstToCustomAst(node),
-		}
+			Childs: childs,
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("loops is empty")
 }
 
 func parseImportNode(node *html.Node) (*ImportNode, error) {
@@ -232,38 +275,53 @@ func parseImportNode(node *html.Node) (*ImportNode, error) {
 	path := searchAttr(node.Attr, "path")
 
 	if path != "" {
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
+
 		return &ImportNode{
 			CtxId:  ctxId,
 			Path:   path,
-			Childs: parseRawAstToCustomAst(node),
+			Childs: childs,
 		}, nil
 	}
 
 	return nil, errors.New("path is empty")
 }
 
-func parseSlotNode(node *html.Node) *SlotNode {
+func parseSlotNode(node *html.Node) (*SlotNode, error) {
 	name := searchAttr(node.Attr, "name")
 
 	if name != "" {
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
+
 		return &SlotNode{
 			Name:   name,
-			Childs: parseRawAstToCustomAst(node),
-		}
+			Childs: childs,
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("slot name is null")
 }
 
-func parseContentNode(node *html.Node) *ContentNode {
+func parseContentNode(node *html.Node) (*ContentNode, error) {
 	name := searchAttr(node.Attr, "name")
 
 	if name != "" {
+		childs, err := parseRawAstToCustomAst(node)
+		if err != nil {
+			return nil, err
+		}
+
 		return &ContentNode{
 			Name:   name,
-			Childs: parseRawAstToCustomAst(node),
-		}
+			Childs: childs,
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("content name is null")
 }
