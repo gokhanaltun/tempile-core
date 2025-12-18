@@ -132,28 +132,20 @@ func parseCommentNode(node *html.Node, src string, fileName string) *CommentNode
 }
 
 func parseTextNode(node *html.Node, src string, fileName string) []Node {
-	// Parser bazen sadece boşluk karakterlerinden oluşan düğümler üretir.
-	// Eğer tamamen boşsa sourceMapIndex'i kaydırmadan dönüyoruz.
 	if strings.TrimSpace(node.Data) == "" {
 		return nil
 	}
 
 	var nodes []Node
 
-	// node.Data ham metni içerir. Ancak biz bunu orijinal src içinde,
-	// kaldığımız yerden itibaren (sourceMapIndex) bulmalıyız.
-	// TextNode için getExactPos'u imza olmadan doğrudan metin araması için kullanıyoruz.
 	_, _, baseIndex := getExactPos(src, sourceMapIndex, node.Data)
 
-	// sourceMapIndex'i bu text düğümünün bittiği yere çekiyoruz.
 	sourceMapIndex = baseIndex + len(node.Data)
 
 	lastInternalIndex := 0
 	trimmedData := node.Data
 
-	// Regex ile içindeki {{...}} yapılarını ayıklıyoruz
 	for _, m := range reTextNode.FindAllStringSubmatchIndex(trimmedData, -1) {
-		// Regex eşleşmesinden önce düz metin varsa onu ekle
 		if m[0] > lastInternalIndex {
 			subText := trimmedData[lastInternalIndex:m[0]]
 			l, c := getPos(src, baseIndex+lastInternalIndex)
@@ -168,7 +160,6 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 			})
 		}
 
-		// {{ @lang code }} yapısı (RawCodeNode veya RawExprNode)
 		if m[2] != -1 {
 			lang := trimmedData[m[2]:m[3]]
 			code := trimmedData[m[4]:m[5]]
@@ -195,7 +186,6 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 				})
 			}
 		} else if m[6] != -1 {
-			// Standart {{ expr }} yapısı
 			expr := trimmedData[m[6]:m[7]]
 			l, c := getPos(src, baseIndex+m[0])
 
@@ -212,7 +202,6 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 		lastInternalIndex = m[1]
 	}
 
-	// Eğer ifadenin sonunda düz metin kaldıysa onu da ekle
 	if lastInternalIndex < len(trimmedData) {
 		subText := trimmedData[lastInternalIndex:]
 		l, c := getPos(src, baseIndex+lastInternalIndex)
