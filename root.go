@@ -1,8 +1,11 @@
 package tempilecore
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Root struct {
@@ -131,12 +134,16 @@ func resolveImports(nodes *[]Node, srcPath string) error {
 		if n.Type() == NodeImport {
 			importNode := n.(*ImportNode)
 
+			pieces := strings.Split(filepath.Join(srcPath, importNode.Path), "/")
+			fileName := pieces[len(pieces)-1]
+
 			fileByte, err := os.ReadFile(filepath.Join(srcPath, importNode.Path))
 			if err != nil {
-				return err
+				errMessage := fmt.Sprintf("%v \n file: %s line: %d col: %d", err, importNode.Pos.FileName, importNode.Pos.Line, importNode.Pos.Column)
+				return errors.New(errMessage)
 			}
 
-			ast, err := Parse(string(fileByte))
+			ast, err := Parse(string(fileByte), fileName)
 			if err != nil {
 				return err
 			}

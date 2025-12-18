@@ -3,6 +3,7 @@ package tempilecore
 type ForNode struct {
 	Loops  []*Attribute
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ForNode) Type() NodeType {

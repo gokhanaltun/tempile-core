@@ -5,6 +5,7 @@ type IfNode struct {
 	Then        []Node
 	ElseIfNodes []*ElseIfNode
 	Else        *ElseNode
+	Pos         Pos
 }
 
 func (n *IfNode) Type() NodeType {

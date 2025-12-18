@@ -3,6 +3,7 @@ package tempilecore
 type ContentNode struct {
 	Name   string
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ContentNode) Type() NodeType {

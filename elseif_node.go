@@ -3,6 +3,7 @@ package tempilecore
 type ElseIfNode struct {
 	Conds  []*Attribute
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ElseIfNode) Type() NodeType {

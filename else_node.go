@@ -2,6 +2,7 @@ package tempilecore
 
 type ElseNode struct {
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ElseNode) Type() NodeType {

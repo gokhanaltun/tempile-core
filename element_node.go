@@ -4,6 +4,7 @@ type ElementNode struct {
 	Tag    string
 	Attrs  []*Attribute
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ElementNode) Type() NodeType {

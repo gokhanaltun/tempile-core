@@ -3,6 +3,7 @@ package tempilecore
 type SlotNode struct {
 	Name   string
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *SlotNode) Type() NodeType {

@@ -4,6 +4,7 @@ type ImportNode struct {
 	CtxId  string
 	Path   string
 	Childs []Node
+	Pos    Pos
 }
 
 func (n *ImportNode) Type() NodeType {

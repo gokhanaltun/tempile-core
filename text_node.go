@@ -2,6 +2,7 @@ package tempilecore
 
 type TextNode struct {
 	Data string
+	Pos  Pos
 }
 
 func (n *TextNode) Type() NodeType {

@@ -2,6 +2,7 @@ package tempilecore
 
 type ExprNode struct {
 	Expr string
+	Pos  Pos
 }
 
 func (n *ExprNode) Type() NodeType {
