@@ -263,16 +263,19 @@ func parseElementNode(node *html.Node, src string, fileName string) (Node, error
 
 	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
+	pos := Pos{
+		FileName: fileName,
+		Line:     line,
+		Column:   col,
+	}
+
+	attrs = parseAttrExpressions(attrs, pos)
 
 	return &ElementNode{
 		Tag:    tag,
 		Attrs:  attrs,
 		Childs: childs,
-		Pos: Pos{
-			FileName: fileName,
-			Line:     line,
-			Column:   col,
-		},
+		Pos:    pos,
 	}, nil
 }
 

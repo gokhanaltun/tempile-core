@@ -3,6 +3,7 @@ package tempilecore
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -33,6 +34,51 @@ func deleteFromAttrs(attrs []html.Attribute, name string) []*Attribute {
 		}
 	}
 	return newAttrs
+}
+
+var attrRegex = regexp.MustCompile(`\{\{(.*?)\}\}`) // Fonksiyon dışında bir kez derle
+
+func parseAttrExpressions(attrs []*Attribute, pos Pos) []*Attribute {
+	parsedAttrs := make([]*Attribute, 0, len(attrs))
+
+	for _, a := range attrs {
+		parts := []Node{}
+		matches := attrRegex.FindAllStringSubmatchIndex(a.Value, -1)
+
+		lastIndex := 0
+		for _, m := range matches {
+			// 1. Text Kısmı
+			if m[0] > lastIndex {
+				rawText := a.Value[lastIndex:m[0]]
+				if strings.TrimSpace(rawText) != "" {
+					parts = append(parts, &TextNode{Data: rawText, Pos: pos})
+				}
+			}
+
+			// 2. Expr Kısmı
+			rawExpr := a.Value[m[2]:m[3]]
+			trimmedExpr := strings.TrimSpace(rawExpr)
+			if trimmedExpr != "" {
+				parts = append(parts, &ExprNode{Expr: trimmedExpr, Pos: pos})
+			}
+			lastIndex = m[1]
+		}
+
+		// 3. Kalan Text Kısmı
+		if lastIndex < len(a.Value) {
+			rawText := a.Value[lastIndex:]
+			if strings.TrimSpace(rawText) != "" {
+				parts = append(parts, &TextNode{Data: rawText, Pos: pos})
+			}
+		}
+
+		parsedAttrs = append(parsedAttrs, &Attribute{
+			Name:       a.Name,
+			Value:      a.Value,
+			ValueNodes: parts,
+		})
+	}
+	return parsedAttrs
 }
 
 func generateId() (string, error) {
