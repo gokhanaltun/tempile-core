@@ -116,14 +116,13 @@ func parseRawAstToCustomAst(rawAST *html.Node, src string, fileName string) ([]N
 func parseCommentNode(node *html.Node, src string, fileName string) *CommentNode {
 	trimmed := strings.TrimSpace(node.Data)
 	if trimmed != "" {
-		line, col, lastIndex := getExactPos(src, sourceMapIndex, node.Data)
+		line, lastIndex := getExactLine(src, sourceMapIndex, node.Data)
 		sourceMapIndex = lastIndex
 		return &CommentNode{
 			Data: fmt.Sprintf("<!-- %s -->", node.Data),
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}
 	}
@@ -138,7 +137,7 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 
 	var nodes []Node
 
-	_, _, baseIndex := getExactPos(src, sourceMapIndex, node.Data)
+	_, baseIndex := getExactLine(src, sourceMapIndex, node.Data)
 
 	sourceMapIndex = baseIndex + len(node.Data)
 
@@ -148,14 +147,13 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 	for _, m := range reTextNode.FindAllStringSubmatchIndex(trimmedData, -1) {
 		if m[0] > lastInternalIndex {
 			subText := trimmedData[lastInternalIndex:m[0]]
-			l, c := getPos(src, baseIndex+lastInternalIndex)
+			l := getLine(src, baseIndex+lastInternalIndex)
 
 			nodes = append(nodes, &TextNode{
 				Data: subText,
 				Pos: Pos{
 					FileName: fileName,
 					Line:     l,
-					Column:   c,
 				},
 			})
 		}
@@ -163,7 +161,7 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 		if m[2] != -1 {
 			lang := trimmedData[m[2]:m[3]]
 			code := trimmedData[m[4]:m[5]]
-			l, c := getPos(src, baseIndex+m[0])
+			l := getLine(src, baseIndex+m[0])
 
 			if lang == "raw" {
 				nodes = append(nodes, &RawExprNode{
@@ -171,7 +169,6 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 					Pos: Pos{
 						FileName: fileName,
 						Line:     l,
-						Column:   c,
 					},
 				})
 			} else {
@@ -181,20 +178,18 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 					Pos: Pos{
 						FileName: fileName,
 						Line:     l,
-						Column:   c,
 					},
 				})
 			}
 		} else if m[6] != -1 {
 			expr := trimmedData[m[6]:m[7]]
-			l, c := getPos(src, baseIndex+m[0])
+			l := getLine(src, baseIndex+m[0])
 
 			nodes = append(nodes, &ExprNode{
 				Expr: expr,
 				Pos: Pos{
 					FileName: fileName,
 					Line:     l,
-					Column:   c,
 				},
 			})
 		}
@@ -204,14 +199,13 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 
 	if lastInternalIndex < len(trimmedData) {
 		subText := trimmedData[lastInternalIndex:]
-		l, c := getPos(src, baseIndex+lastInternalIndex)
+		l := getLine(src, baseIndex+lastInternalIndex)
 
 		nodes = append(nodes, &TextNode{
 			Data: subText,
 			Pos: Pos{
 				FileName: fileName,
 				Line:     l,
-				Column:   c,
 			},
 		})
 	}
@@ -229,13 +223,12 @@ func parseElementNode(node *html.Node, src string, fileName string) (Node, error
 	case "doctype":
 		doctype := "type=\"doctype\""
 		index := strings.Index(src, doctype)
-		line, col := getPos(src, index)
+		line := getLine(src, index)
 		return &DocumentTypeNode{
 			Data: "<!DOCTYPE html>",
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	case "html":
@@ -261,12 +254,11 @@ func parseElementNode(node *html.Node, src string, fileName string) (Node, error
 		return nil, err
 	}
 
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 	pos := Pos{
 		FileName: fileName,
 		Line:     line,
-		Column:   col,
 	}
 
 	attrs = parseAttrExpressions(attrs, pos)
@@ -282,7 +274,7 @@ func parseElementNode(node *html.Node, src string, fileName string) (Node, error
 func parseIfNode(node *html.Node, src string, fileName string) (*IfNode, error) {
 	conds := parseAttrs(node.Attr)
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if len(conds) > 0 {
@@ -297,7 +289,6 @@ func parseIfNode(node *html.Node, src string, fileName string) (*IfNode, error) 
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}
 
@@ -315,13 +306,13 @@ func parseIfNode(node *html.Node, src string, fileName string) (*IfNode, error) 
 		}
 		return ifNode, nil
 	}
-	return nil, fmt.Errorf("null conds \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null conds \n file: %s line: %d", fileName, line)
 }
 
 func parseElseIfNode(node *html.Node, src string, fileName string) (*ElseIfNode, error) {
 	conds := parseAttrs(node.Attr)
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if len(conds) > 0 {
@@ -336,12 +327,11 @@ func parseElseIfNode(node *html.Node, src string, fileName string) (*ElseIfNode,
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	}
 
-	return nil, fmt.Errorf("null conds \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null conds \n file: %s line: %d", fileName, line)
 }
 
 func parseElseNode(node *html.Node, src string, fileName string) (*ElseNode, error) {
@@ -351,7 +341,7 @@ func parseElseNode(node *html.Node, src string, fileName string) (*ElseNode, err
 	}
 
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	return &ElseNode{
@@ -359,7 +349,6 @@ func parseElseNode(node *html.Node, src string, fileName string) (*ElseNode, err
 		Pos: Pos{
 			FileName: fileName,
 			Line:     line,
-			Column:   col,
 		},
 	}, nil
 }
@@ -367,7 +356,7 @@ func parseElseNode(node *html.Node, src string, fileName string) (*ElseNode, err
 func parseForNode(node *html.Node, src string, fileName string) (*ForNode, error) {
 	loops := parseAttrs(node.Attr)
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if len(loops) > 0 {
@@ -382,12 +371,11 @@ func parseForNode(node *html.Node, src string, fileName string) (*ForNode, error
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	}
 
-	return nil, fmt.Errorf("null loop \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null loop \n file: %s line: %d", fileName, line)
 }
 
 func parseImportNode(node *html.Node, src string, fileName string) (*ImportNode, error) {
@@ -399,7 +387,7 @@ func parseImportNode(node *html.Node, src string, fileName string) (*ImportNode,
 	path := searchAttr(node.Attr, "path")
 
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if path != "" {
@@ -415,19 +403,18 @@ func parseImportNode(node *html.Node, src string, fileName string) (*ImportNode,
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	}
 
-	return nil, fmt.Errorf("null path \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null path \n file: %s line: %d", fileName, line)
 
 }
 
 func parseSlotNode(node *html.Node, src string, fileName string) (*SlotNode, error) {
 	name := searchAttr(node.Attr, "name")
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if name != "" {
@@ -442,18 +429,17 @@ func parseSlotNode(node *html.Node, src string, fileName string) (*SlotNode, err
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	}
 
-	return nil, fmt.Errorf("null slot name \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null slot name \n file: %s line: %d", fileName, line)
 }
 
 func parseContentNode(node *html.Node, src string, fileName string) (*ContentNode, error) {
 	name := searchAttr(node.Attr, "name")
 	data := "<" + strings.ToLower(node.Data)
-	line, col, lastIndex := getExactPos(src, sourceMapIndex, data)
+	line, lastIndex := getExactLine(src, sourceMapIndex, data)
 	sourceMapIndex = lastIndex
 
 	if name != "" {
@@ -468,10 +454,9 @@ func parseContentNode(node *html.Node, src string, fileName string) (*ContentNod
 			Pos: Pos{
 				FileName: fileName,
 				Line:     line,
-				Column:   col,
 			},
 		}, nil
 	}
 
-	return nil, fmt.Errorf("null content name \n file: %s line: %d col: %d", fileName, line, col)
+	return nil, fmt.Errorf("null content name \n file: %s line: %d", fileName, line)
 }

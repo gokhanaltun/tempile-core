@@ -47,7 +47,6 @@ func parseAttrExpressions(attrs []*Attribute, pos Pos) []*Attribute {
 
 		lastIndex := 0
 		for _, m := range matches {
-			// 1. Text Kısmı
 			if m[0] > lastIndex {
 				rawText := a.Value[lastIndex:m[0]]
 				if strings.TrimSpace(rawText) != "" {
@@ -55,7 +54,6 @@ func parseAttrExpressions(attrs []*Attribute, pos Pos) []*Attribute {
 				}
 			}
 
-			// 2. Expr Kısmı
 			rawExpr := a.Value[m[2]:m[3]]
 			trimmedExpr := strings.TrimSpace(rawExpr)
 			if trimmedExpr != "" {
@@ -64,7 +62,6 @@ func parseAttrExpressions(attrs []*Attribute, pos Pos) []*Attribute {
 			lastIndex = m[1]
 		}
 
-		// 3. Kalan Text Kısmı
 		if lastIndex < len(a.Value) {
 			rawText := a.Value[lastIndex:]
 			if strings.TrimSpace(rawText) != "" {
@@ -93,42 +90,34 @@ func generateId() (string, error) {
 	return base64.RawStdEncoding.EncodeToString(id), nil
 }
 
-func getPos(src string, index int) (line int, column int) {
-	line = 1
-	column = 1
-
+func getLine(src string, index int) int {
+	line := 1
 	for i, ch := range src {
 		if i >= index {
 			break
 		}
 		if ch == '\n' {
 			line++
-			column = 1
-		} else {
-			column++
 		}
 	}
-	return
+	return line
 }
 
-func getExactPos(src string, lastOffset int, data string) (int, int, int) {
+func getExactLine(src string, lastOffset int, data string) (line int, endIndex int) {
 	if lastOffset >= len(src) {
 		lastOffset = len(src) - 1
 		if lastOffset < 0 {
 			lastOffset = 0
 		}
 	}
-
 	searchArea := src[lastOffset:]
 	index := strings.Index(strings.ToLower(searchArea), strings.ToLower(data))
 
 	if index == -1 {
-		l, c := getPos(src, lastOffset)
-		return l, c, lastOffset
+		return getLine(src, lastOffset), lastOffset
 	}
 
 	realIndex := lastOffset + index
-	line, col := getPos(src, realIndex)
-
-	return line, col, realIndex + len(data)
+	line = getLine(src, realIndex)
+	return line, realIndex + len(data)
 }
