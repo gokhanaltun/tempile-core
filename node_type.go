@@ -12,6 +12,7 @@ const (
 	NodeElse
 	NodeFor
 	NodeInclude
+	NodeImport
 	NodeSlot
 	NodeContent
 	NodeExpr

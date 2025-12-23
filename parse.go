@@ -57,6 +57,12 @@ func parseRawAstToCustomAst(rawAST *html.Node, src string, fileName string) ([]N
 			tag := strings.ToLower(c.Data)
 
 			switch tag {
+			case "import":
+				importNode, err := parseImportNode(c, src, fileName)
+				if err != nil {
+					return nil, err
+				}
+				nodes = append(nodes, importNode)
 			case "if":
 				ifNode, err := parseIfNode(c, src, fileName)
 				if err != nil {
@@ -213,6 +219,24 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 	return nodes
 }
 
+func parseImportNode(node *html.Node, src string, fileName string) (Node, error) {
+	data := searchAttr(node.Attr, "data")
+	line, index := getExactLine(src, sourceMapIndex, "<import data=\"")
+	sourceMapIndex = index
+
+	if strings.TrimSpace(data) == "" {
+		return nil, fmt.Errorf("missing import data: file name: %s line: %d", fileName, line)
+	}
+
+	return &ImportNode{
+		Data: data,
+		Pos: Pos{
+			FileName: fileName,
+			Line:     line,
+		},
+	}, nil
+}
+
 func parseElementNode(node *html.Node, src string, fileName string) (Node, error) {
 	tempileType := searchAttr(node.Attr, "type")
 	tag := ""
@@ -222,8 +246,9 @@ func parseElementNode(node *html.Node, src string, fileName string) (Node, error
 	switch tempileType {
 	case "doctype":
 		doctype := "type=\"doctype\""
-		index := strings.Index(src, doctype)
-		line := getLine(src, index)
+		line, endIndex := getExactLine(src, sourceMapIndex, doctype)
+		sourceMapIndex = endIndex
+
 		return &DocumentTypeNode{
 			Data: "<!DOCTYPE html>",
 			Pos: Pos{
