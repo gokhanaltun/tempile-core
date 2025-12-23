@@ -20,28 +20,28 @@ func TestImportParsing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root.ResolveImports("./")
+	root.ResolveIncludes("./")
 
 	if len(root.Childs) != 1 {
 		t.Fatalf("expected 1 root child, got %d", len(root.Childs))
 	}
 
-	importNode, ok := root.Childs[0].(*ImportNode)
+	includeNode, ok := root.Childs[0].(*IncludeNode)
 	if !ok {
-		t.Fatalf("expected ImportNode")
+		t.Fatalf("expected IncludeNode")
 	}
 
-	if importNode.Path != "header.html" {
-		t.Fatalf("expected path 'header.html', got %q", importNode.Path)
+	if includeNode.Path != "header.html" {
+		t.Fatalf("expected path 'header.html', got %q", includeNode.Path)
 	}
 
-	if len(importNode.Childs) != 1 {
-		t.Fatalf("expected 1 child in import, got %d", len(importNode.Childs))
+	if len(includeNode.Childs) != 1 {
+		t.Fatalf("expected 1 child in import, got %d", len(includeNode.Childs))
 	}
 
-	div, ok := importNode.Childs[0].(*ElementNode)
+	div, ok := includeNode.Childs[0].(*ElementNode)
 	if !ok || div.Tag != "div" {
-		t.Fatalf("expected child div element, got %T %v", importNode.Childs[0], importNode.Childs[0])
+		t.Fatalf("expected child div element, got %T %v", includeNode.Childs[0], includeNode.Childs[0])
 	}
 }
 
@@ -60,7 +60,7 @@ func TestNestedSlotContent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root.ResolveImports("./")
+	root.ResolveIncludes("./")
 	root.MatchSlotsAndContents()
 
 	if len(root.Childs) != 2 {
@@ -104,7 +104,7 @@ func TestNestedImportWithSlotContent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root.ResolveImports("./")
+	root.ResolveIncludes("./")
 	root.MatchSlotsAndContents()
 
 	if len(root.Childs) != 3 {

@@ -82,7 +82,7 @@ func parseRawAstToCustomAst(rawAST *html.Node, src string, fileName string) ([]N
 				}
 				nodes = append(nodes, forNode)
 			case "import":
-				importNode, err := parseImportNode(c, src, fileName)
+				importNode, err := parseIncludeNode(c, src, fileName)
 
 				if err != nil {
 					return nil, err
@@ -378,7 +378,7 @@ func parseForNode(node *html.Node, src string, fileName string) (*ForNode, error
 	return nil, fmt.Errorf("null loop \n file: %s line: %d", fileName, line)
 }
 
-func parseImportNode(node *html.Node, src string, fileName string) (*ImportNode, error) {
+func parseIncludeNode(node *html.Node, src string, fileName string) (*IncludeNode, error) {
 	ctxId, err := generateId()
 	if err != nil {
 		return nil, err
@@ -396,7 +396,7 @@ func parseImportNode(node *html.Node, src string, fileName string) (*ImportNode,
 			return nil, err
 		}
 
-		return &ImportNode{
+		return &IncludeNode{
 			CtxId:  ctxId,
 			Path:   path,
 			Childs: childs,

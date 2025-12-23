@@ -12,8 +12,8 @@ type Root struct {
 	Childs []Node
 }
 
-func (r *Root) ResolveImports(srcPath string) error {
-	err := resolveImports(&r.Childs, srcPath)
+func (r *Root) ResolveIncludes(srcPath string) error {
+	err := resolveIncludes(&r.Childs, srcPath)
 	if err != nil {
 		return err
 	}
@@ -22,11 +22,11 @@ func (r *Root) ResolveImports(srcPath string) error {
 }
 
 func (r *Root) MatchSlotsAndContents() {
-	importNodes := collectImports(&r.Childs)
+	includeNodes := collectIncludes(&r.Childs)
 	slotsMap := make(map[string]map[string]*SlotNode)
 	contentsMap := make(map[string]map[string]*ContentNode)
 
-	for _, imp := range importNodes {
+	for _, imp := range includeNodes {
 		slots, contents := collectSlotsAndContents(&imp.Childs)
 		slotsMap[imp.CtxId] = slots
 		contentsMap[imp.CtxId] = contents
@@ -41,22 +41,22 @@ func (r *Root) MatchSlotsAndContents() {
 		}
 	}
 
-	unwrapImports(&r.Childs)
+	unwrapIncludes(&r.Childs)
 	unwrapSlots(&r.Childs)
 }
 
-func unwrapImports(nodes *[]Node) {
+func unwrapIncludes(nodes *[]Node) {
 	for i := 0; i < len(*nodes); i++ {
 		n := (*nodes)[i]
 
-		if n.Type() == NodeImport {
-			importNode := n.(*ImportNode)
-			unwrapImports(&importNode.Childs)
-			*nodes = append(append((*nodes)[:i], importNode.Childs...), (*nodes)[i+1:]...)
+		if n.Type() == NodeInclude {
+			includeNode := n.(*IncludeNode)
+			unwrapIncludes(&includeNode.Childs)
+			*nodes = append(append((*nodes)[:i], includeNode.Childs...), (*nodes)[i+1:]...)
 		} else {
 			childs := n.GetChilds()
 			if childs != nil {
-				unwrapImports(childs)
+				unwrapIncludes(childs)
 			}
 		}
 	}
@@ -79,20 +79,20 @@ func unwrapSlots(nodes *[]Node) {
 	}
 }
 
-func collectImports(nodes *[]Node) []*ImportNode {
-	importNodes := []*ImportNode{}
+func collectIncludes(nodes *[]Node) []*IncludeNode {
+	includeNodes := []*IncludeNode{}
 
 	for _, n := range *nodes {
-		if n.Type() == NodeImport {
-			importNode := n.(*ImportNode)
-			importNodes = append(importNodes, importNode)
+		if n.Type() == NodeInclude {
+			includeNode := n.(*IncludeNode)
+			includeNodes = append(includeNodes, includeNode)
 		}
 		if childs := n.GetChilds(); childs != nil {
-			importNodes = append(importNodes, collectImports(childs)...)
+			includeNodes = append(includeNodes, collectIncludes(childs)...)
 		}
 	}
 
-	return importNodes
+	return includeNodes
 }
 
 func collectSlotsAndContents(nodes *[]Node) (map[string]*SlotNode, map[string]*ContentNode) {
@@ -129,17 +129,17 @@ func collectSlotsAndContents(nodes *[]Node) (map[string]*SlotNode, map[string]*C
 	return slots, contents
 }
 
-func resolveImports(nodes *[]Node, srcPath string) error {
+func resolveIncludes(nodes *[]Node, srcPath string) error {
 	for _, n := range *nodes {
-		if n.Type() == NodeImport {
-			importNode := n.(*ImportNode)
+		if n.Type() == NodeInclude {
+			includeNode := n.(*IncludeNode)
 
-			pieces := strings.Split(filepath.Join(srcPath, importNode.Path), "/")
+			pieces := strings.Split(filepath.Join(srcPath, includeNode.Path), "/")
 			fileName := pieces[len(pieces)-1]
 
-			fileByte, err := os.ReadFile(filepath.Join(srcPath, importNode.Path))
+			fileByte, err := os.ReadFile(filepath.Join(srcPath, includeNode.Path))
 			if err != nil {
-				errMessage := fmt.Sprintf("%v \n file: %s line: %d col: %d", err, importNode.Pos.FileName, importNode.Pos.Line, importNode.Pos.Column)
+				errMessage := fmt.Sprintf("%v \n file: %s line: %d col: %d", err, includeNode.Pos.FileName, includeNode.Pos.Line, includeNode.Pos.Column)
 				return errors.New(errMessage)
 			}
 
@@ -148,25 +148,25 @@ func resolveImports(nodes *[]Node, srcPath string) error {
 				return err
 			}
 
-			resolveImports(&ast.Childs, srcPath)
+			resolveIncludes(&ast.Childs, srcPath)
 
-			for i := 0; i < len(importNode.Childs); i++ {
-				n := importNode.Childs[i]
+			for i := 0; i < len(includeNode.Childs); i++ {
+				n := includeNode.Childs[i]
 
 				if n.Type() != NodeContent {
-					importNode.Childs = append(importNode.Childs[:i], importNode.Childs[i+1:]...)
+					includeNode.Childs = append(includeNode.Childs[:i], includeNode.Childs[i+1:]...)
 					i = i - 1
 				}
 			}
 
-			resolveImports(&importNode.Childs, srcPath)
+			resolveIncludes(&includeNode.Childs, srcPath)
 
-			importNode.Childs = append(ast.Childs, importNode.Childs...)
+			includeNode.Childs = append(ast.Childs, includeNode.Childs...)
 
 		} else {
 			childs := n.GetChilds()
 			if childs != nil {
-				resolveImports(childs, srcPath)
+				resolveIncludes(childs, srcPath)
 			}
 		}
 	}
