@@ -81,13 +81,13 @@ func parseRawAstToCustomAst(rawAST *html.Node, src string, fileName string) ([]N
 					return nil, err
 				}
 				nodes = append(nodes, forNode)
-			case "import":
-				importNode, err := parseIncludeNode(c, src, fileName)
+			case "include":
+				includeNode, err := parseIncludeNode(c, src, fileName)
 
 				if err != nil {
 					return nil, err
 				}
-				nodes = append(nodes, importNode)
+				nodes = append(nodes, includeNode)
 
 			case "slot":
 				slotNode, err := parseSlotNode(c, src, fileName)

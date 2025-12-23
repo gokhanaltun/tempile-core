@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestImportParsing(t *testing.T) {
+func TestIncludeParsing(t *testing.T) {
 	content := `<div>Header</div>`
 	err := os.WriteFile("header.html", []byte(content), 0644)
 	if err != nil {
@@ -13,7 +13,7 @@ func TestImportParsing(t *testing.T) {
 	}
 	defer os.Remove("header.html")
 
-	src := `<import path="header.html"></import>`
+	src := `<include path="header.html"></include>`
 
 	root, err := Parse(src, "main.html")
 	if err != nil {
@@ -36,7 +36,7 @@ func TestImportParsing(t *testing.T) {
 	}
 
 	if len(includeNode.Childs) != 1 {
-		t.Fatalf("expected 1 child in import, got %d", len(includeNode.Childs))
+		t.Fatalf("expected 1 child in include, got %d", len(includeNode.Childs))
 	}
 
 	div, ok := includeNode.Childs[0].(*ElementNode)
@@ -51,9 +51,9 @@ func TestNestedSlotContent(t *testing.T) {
 	defer os.Remove("header.html")
 
 	main := `
-<import path="header.html">
+<include path="header.html">
   <content name="header"><h1>Custom Header</h1></content>
-</import>
+</include>
 `
 	root, err := Parse(main, "main.html")
 	if err != nil {
@@ -78,7 +78,7 @@ func TestNestedSlotContent(t *testing.T) {
 	}
 }
 
-func TestNestedImportWithSlotContent(t *testing.T) {
+func TestNestedIncludeWithSlotContent(t *testing.T) {
 	os.WriteFile("header.html", []byte(`<div>Header</div>`), 0644)
 	defer os.Remove("header.html")
 
@@ -86,17 +86,17 @@ func TestNestedImportWithSlotContent(t *testing.T) {
 	defer os.Remove("footer.html")
 
 	layout := `
-<import path="header.html"></import>
+<include path="header.html"></include>
 <slot name="body"></slot>
-<import path="footer.html"></import>
+<include path="footer.html"></include>
 `
 	os.WriteFile("layout.html", []byte(layout), 0644)
 	defer os.Remove("layout.html")
 
 	main := `
-<import path="layout.html">
+<include path="layout.html">
   <content name="body"><p>Main Content</p></content>
-</import>
+</include>
 `
 
 	root, err := Parse(main, "main.html")
