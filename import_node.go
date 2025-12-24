@@ -1,8 +1,8 @@
 package tempilecore
 
 type ImportNode struct {
-	Data string
-	Pos  Pos
+	Attrs []*Attribute
+	Pos   Pos
 }
 
 func (n *ImportNode) Type() NodeType {

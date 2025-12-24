@@ -220,16 +220,12 @@ func parseTextNode(node *html.Node, src string, fileName string) []Node {
 }
 
 func parseImportNode(node *html.Node, src string, fileName string) (Node, error) {
-	data := searchAttr(node.Attr, "data")
-	line, index := getExactLine(src, sourceMapIndex, "<import data=\"")
+	attrs := parseAttrs(node.Attr)
+	line, index := getExactLine(src, sourceMapIndex, "<import ")
 	sourceMapIndex = index
 
-	if strings.TrimSpace(data) == "" {
-		return nil, fmt.Errorf("missing import data: file name: %s line: %d", fileName, line)
-	}
-
 	return &ImportNode{
-		Data: data,
+		Attrs: attrs,
 		Pos: Pos{
 			FileName: fileName,
 			Line:     line,
