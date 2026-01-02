@@ -1,7 +1,7 @@
 {
   "name": "tempile-core",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "tempile-core",
   "private": false,
   "publishConfig": {
     "access": "public"
